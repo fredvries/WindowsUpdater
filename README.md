@@ -8,3 +8,4 @@ Instructions:
 
 Changelog:
 - [16may26] version 1.0: Initial release
+- [06jun26] version 1.1: Added Driver Updates (using Windows Update)
