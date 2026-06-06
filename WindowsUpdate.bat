@@ -3,12 +3,12 @@ title Windows Update Automation
 color 0A
 
 :: -------------------------------------------------
-:: WindowUpdater 1.0
+:: WindowUpdater 1.1
 :: Run this file as Administrator
 :: -------------------------------------------------
 
 echo ==========================================
-echo     WindowsUpdater 1.0
+echo     WindowsUpdater 1.1
 echo ==========================================
 echo.
 
@@ -20,7 +20,7 @@ if %errorLevel% neq 0 (
     exit /b
 )
 
-echo [1/5] Starting Windows Update services...
+echo [1/6] Starting Windows Update services...
 
 net start wuauserv >nul 2>&1
 net start bits >nul 2>&1
@@ -30,45 +30,69 @@ echo Done.
 echo.
 
 :: Install PSWindowsUpdate module if missing
-echo [2/5] Checking PowerShell Windows Update module...
+echo [2/6] Checking PowerShell Windows Update module...
 
 powershell -Command ^
 "if (-not (Get-Module -ListAvailable -Name PSWindowsUpdate)) { ^
     Install-PackageProvider -Name NuGet -Force; ^
-    Install-Module PSWindowsUpdate -Force -Confirm:$false ^
+    Install-Module PSWindowsUpdate -Force -Confirm:$false -Scope CurrentUser ^
 }"
 
 echo Done.
 echo.
 
-:: Import module and install updates
-echo [3/5] Searching and installing updates...
+:: Windows Updates
+echo [3/6] Searching and installing Windows Updates...
 echo This may take a while.
 echo.
 
 powershell -Command ^
 "Import-Module PSWindowsUpdate; ^
-Get-WindowsUpdate -AcceptAll -Install -IgnoreReboot"
+Get-WindowsUpdate -AcceptAll -Install -IgnoreReboot -Verbose"
 
 echo.
-echo [4/5] Update installation completed.
+echo Windows Updates completed.
+echo.
+
+:: Driver Updates
+echo [4/6] Searching and installing Driver Updates...
+echo This may take a while (drivers from Microsoft Update).
+echo.
+
+powershell -Command ^
+"Import-Module PSWindowsUpdate; ^
+Get-WUDriver -MicrosoftUpdate -AcceptAll -Install -IgnoreReboot -Verbose"
+
+echo.
+echo Driver Updates completed.
+echo.
+
+:: Post-update cleanup (optional but recommended)
+echo [5/6] Performing cleanup...
+echo.
+
+powershell -Command "Get-WUHistory | Select-Object -Last 10 | Format-Table" >nul 2>&1
+
+echo Done.
 echo.
 
 :: Ask user about reboot
-choice /M "Do you want to reboot now"
+echo [6/6] Update process finished.
+echo.
+choice /M "Do you want to reboot now (recommended)"
 
 if errorlevel 2 goto END
 if errorlevel 1 goto REBOOT
 
 :REBOOT
 echo.
-echo [5/5] Rebooting system in 15 seconds...
+echo Rebooting system in 15 seconds...
 shutdown /r /t 15
 goto EOF
 
 :END
 echo.
-echo Reboot skipped.
+echo Reboot skipped. Remember to reboot later for changes to take effect.
 pause
 
 :EOF
